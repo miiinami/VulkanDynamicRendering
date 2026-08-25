@@ -1,0 +1,9 @@
+{
+  "name": "vulkandynamicrendering",
+  "version": "1.0.0",
+  "dependencies": [
+    "fmt",
+    "glfw3",
+    "tinyobjloader"
+  ]
+}

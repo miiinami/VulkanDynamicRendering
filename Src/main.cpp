@@ -1,8 +1,29 @@
-import vulkan_hpp;
+#include"Core/Core.hpp"
 #include<iostream>
+#include<stdexcept>
 
 int main()
 {
-	std::cout << "test\n";
-	return 0;
+	Core core;
+
+	try
+	{
+		core.Init();
+
+		while (!core.WindowShouldClose())
+		{
+			glfwPollEvents();
+		}
+
+		core.CleanUp();
+
+		return EXIT_SUCCESS;
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << e.what() << "\n";
+		return EXIT_FAILURE;
+	}
+
+	return EXIT_FAILURE;
 }
