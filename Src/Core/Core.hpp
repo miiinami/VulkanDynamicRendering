@@ -5,6 +5,9 @@
 #include"VulkanSurface/VulkanSurface.hpp"
 #include"VulkanDevice/VulkanDevice.hpp"
 #include"SwapChain/VulkanSwapChain.hpp"
+#include"GraphicsPipeline/GraphicsPipeline.hpp"
+#include"Buffer/CommandBuffer/CommandBuffer.hpp"
+#include"RenderController/RenderController.hpp"
 
 class Core
 {
@@ -12,6 +15,9 @@ public:
 	void Init();
 	void CleanUp();
 	bool WindowShouldClose();
+	void drawFrame();
+	void deviceWaitIdle();
+
 private:
 	void InitVulkan();
 	//void MainLoop();
@@ -23,4 +29,7 @@ private:
 	VulkanSurface vulkanSurface;
 	VulkanDevice vulkanDevice;
 	VulkanSwapChain vulkanSwapChain;
+	GraphicsPipeline graphicsPipeline;
+	CommandBuffer commandBuffer;
+	RenderController renderController;
 };

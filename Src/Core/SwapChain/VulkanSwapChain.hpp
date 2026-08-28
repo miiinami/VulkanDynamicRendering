@@ -10,6 +10,12 @@ public:
 
 	void createSwapChain(const vk::raii::PhysicalDevice& physicaldevice, const vk::raii::Device& device, const vk::raii::SurfaceKHR& surface, GLFWwindow* window);
 	void createImageView(const vk::raii::Device& device);
+
+	const vk::raii::SwapchainKHR& getSwapChain() const;
+	const std::vector<vk::Image>& getSwapChainImages() const;
+	const std::vector<vk::raii::ImageView>& getSwapChainImageViews() const;
+	const vk::SurfaceFormatKHR& getSwapChainSurfaceFormat() const;
+	const vk::Extent2D& getSwapChainExtent() const;
 private:
 	vk::raii::SwapchainKHR m_swapchain;
 	std::vector<vk::Image> m_swapChainImages;

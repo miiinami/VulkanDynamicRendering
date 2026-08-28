@@ -81,13 +81,50 @@ endif()
 
 add_executable(${PROJECT_NAME} 
 "Src/main.cpp"
+"Src/Core/Core.cpp"
 "Src/Core/VulkanInstance/VulkanInstance.cpp"
 "Src/Core/GLFWwidnow/GLFWwindowClass.cpp"
 "Src/Core/DebugMessenger/DebugMessenger.cpp" 
 "Src/Core/VulkanDevice/VulkanDevice.cpp" 
 "Src/Core/VulkanSurface/VulkanSurface.cpp" 
 "Src/Core/SwapChain/VulkanSwapChain.cpp" 
-"Src/Core/Core.cpp")
+"Src/Helper/ReadResources/ReadResources.cpp"
+"Src/Core/GraphicsPipeline/GraphicsPipeline.cpp" 
+"Src/Core/Buffer/CommandBuffer/CommandBuffer.cpp"  "Src/Core/RenderController/RenderController.cpp")
+
+ target_include_directories(${PROJECT_NAME} PRIVATE "Src")
+
+# 收集所有 .vert 和 .frag 文件（可按需扩展）
+file(GLOB SHADER_FILES
+    "${CMAKE_SOURCE_DIR}/Src/Shader/*.vert"
+    "${CMAKE_SOURCE_DIR}/Src/Shader/*.frag"
+)
+
+# 输出目录：构建目录下的 shaders 文件夹
+set(SHADER_OUTPUT_DIR "${CMAKE_BINARY_DIR}/Shader")
+file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
+
+set(SPV_FILES "")
+
+# 为每个着色器文件生成编译命令
+foreach(SHADER_FILE ${SHADER_FILES})
+    get_filename_component(SHADER_NAME ${SHADER_FILE} NAME_WE)   # 不带扩展名的文件名
+    set(SPV_FILE "${SHADER_OUTPUT_DIR}/${SHADER_NAME}.spv")
+
+    message(STATUS "glslc ${SHADER_FILE} -o ${SPV_FILE}")
+
+    add_custom_command(
+        OUTPUT ${SPV_FILE}
+        COMMAND glslc "${SHADER_FILE}" -o "${SPV_FILE}"
+        DEPENDS ${SHADER_FILE}
+        COMMENT "Compiling ${SHADER_FILE}"
+        VERBATIM
+    )
+    list(APPEND SPV_FILES ${SPV_FILE})
+endforeach()
+
+add_custom_target(CompileShaders ALL DEPENDS ${SPV_FILES})
+add_dependencies(${PROJECT_NAME} CompileShaders)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_STANDARD 20

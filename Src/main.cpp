@@ -13,7 +13,10 @@ int main()
 		while (!core.WindowShouldClose())
 		{
 			glfwPollEvents();
+			core.drawFrame();
 		}
+
+		core.deviceWaitIdle();
 
 		core.CleanUp();
 

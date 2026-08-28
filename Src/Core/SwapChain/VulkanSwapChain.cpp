@@ -92,3 +92,28 @@ void VulkanSwapChain::createImageView(const vk::raii::Device& device)
         m_swapChainImageViews.emplace_back(device, imageViewCreateInfo);
     }
 }
+
+const vk::raii::SwapchainKHR& VulkanSwapChain::getSwapChain() const
+{
+    return m_swapchain;
+}
+
+const std::vector<vk::Image>& VulkanSwapChain::getSwapChainImages() const
+{
+    return m_swapChainImages;
+}
+
+const std::vector<vk::raii::ImageView>& VulkanSwapChain::getSwapChainImageViews() const
+{
+    return m_swapChainImageViews;
+}
+
+const vk::SurfaceFormatKHR& VulkanSwapChain::getSwapChainSurfaceFormat() const
+{
+    return m_swapChainSurfaceFormat;
+}
+
+const vk::Extent2D& VulkanSwapChain::getSwapChainExtent() const
+{
+    return m_swapChainExtent;
+}

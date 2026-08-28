@@ -3,7 +3,7 @@
 #include<map>
 #include<cassert>
 
-VulkanDevice::VulkanDevice() :m_physicalDevice(nullptr), m_device(nullptr), m_queue(nullptr)
+VulkanDevice::VulkanDevice() :m_physicalDevice(nullptr), m_device(nullptr), m_queue(nullptr), m_queueIndex(~0)
 {
 
 }
@@ -16,6 +16,16 @@ const vk::raii::PhysicalDevice& VulkanDevice::getPhysicalDevice() const
 const vk::raii::Device& VulkanDevice::getLogicalDevice() const
 {
 	return m_device;
+}
+
+const vk::raii::Queue& VulkanDevice::getQueue() const
+{
+	return m_queue;
+}
+
+const uint32_t& VulkanDevice::getQueueIndex() const
+{
+	return m_queueIndex;
 }
 
 bool VulkanDevice::isDeviceSuitable(vk::raii::PhysicalDevice const& physicalDevice)
@@ -78,31 +88,34 @@ void VulkanDevice::createLogicalDevice(const vk::raii::SurfaceKHR& surface)
 {
 	std::vector<vk::QueueFamilyProperties> queueFamilyProperties = m_physicalDevice.getQueueFamilyProperties();
 
-	uint32_t queueIndex = ~0;
 	for (uint32_t qfpIndex = 0; qfpIndex < queueFamilyProperties.size(); qfpIndex++)
 	{
 		if ((queueFamilyProperties[qfpIndex].queueFlags & vk::QueueFlagBits::eGraphics) && m_physicalDevice.getSurfaceSupportKHR(qfpIndex, *surface))
 		{
-			queueIndex = qfpIndex;
+			m_queueIndex = qfpIndex;
 			break;
 		}
 	}
-	if (queueIndex == ~0)
+	if (m_queueIndex == ~0)
 	{
 		throw std::runtime_error("Could not find a queue for graphics and present -> terminating");
 	}
 
 	float queuePriority = 0.5f;
 	vk::DeviceQueueCreateInfo deviceQueueCreateInfo{
-		.queueFamilyIndex = queueIndex,
+		.queueFamilyIndex = m_queueIndex,
 		.queueCount = 1,
 		.pQueuePriorities = &queuePriority
 	};
 
-	vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan11Features,
-		vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> featureChain = {
-			{}, {.shaderDrawParameters = true},
-			{.dynamicRendering = true}, {.extendedDynamicState = true}
+	vk::StructureChain<vk::PhysicalDeviceFeatures2,
+		vk::PhysicalDeviceVulkan11Features,
+		vk::PhysicalDeviceVulkan13Features,
+		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT> featureChain = {
+			{},
+			{.shaderDrawParameters = true},
+			{.synchronization2 = true, .dynamicRendering = true},
+			{.extendedDynamicState = true}
 	};
 
 	std::vector<const char*> requiredDeviceExtension =
@@ -119,7 +132,7 @@ void VulkanDevice::createLogicalDevice(const vk::raii::SurfaceKHR& surface)
 	};
 
 	m_device = vk::raii::Device(m_physicalDevice, deviceCreateInfo);
-	m_queue = vk::raii::Queue(m_device, queueIndex, 0);
+	m_queue = vk::raii::Queue(m_device, m_queueIndex, 0);
 }
 
 void VulkanDevice::createDevice(const vk::raii::Instance& instance, const vk::raii::SurfaceKHR& surface)
