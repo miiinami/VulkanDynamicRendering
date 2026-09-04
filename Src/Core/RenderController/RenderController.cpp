@@ -2,45 +2,67 @@
 #include"Core/VulkanDevice/VulkanDevice.hpp"
 #include"Core/SwapChain/VulkanSwapChain.hpp"
 #include"Core/Buffer/CommandBuffer/CommandBuffer.hpp"
+#include"Core/Buffer/VertexBuffer/VertexBuffer.hpp"
+#include"Core/Buffer/UniformBuffer/UniformBuffer.hpp"
+#include"Core/Buffer/DepthBuffer/DepthBuffer.hpp"
 #include<iostream>
+#include<exception>
 
 RenderController::RenderController() :frameIndex(0)
 {
 
 };
 
-void RenderController::createSyncObjects(const vk::raii::Device& device, const size_t& ImagesCount, const uint32_t& MAX_FRAMES_IN_FLIGHT)
+void RenderController::createSyncObjects(const vk::raii::Device& device, const size_t& ImagesCount)
 {
+	assert(presentCompleteSemaphores.empty() && renderFinishedSemaphores.empty() && inFlightFences.empty());
+
 	for (size_t i = 0; i < ImagesCount; i++)
 	{
 		renderFinishedSemaphores.emplace_back(device, vk::SemaphoreCreateInfo());
 	}
-	for (size_t i = 0; i < static_cast<size_t>(MAX_FRAMES_IN_FLIGHT); i++)
+
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 	{
 		presentCompleteSemaphores.emplace_back(device, vk::SemaphoreCreateInfo());
 		inFlightFences.emplace_back(device, vk::FenceCreateInfo{ .flags = vk::FenceCreateFlagBits::eSignaled });
 	}
 }
 
-void RenderController::drawFrame(const VulkanDevice& vulkanDevice, const VulkanSwapChain& vulkanSwapChain,CommandBuffer& classCommandBuffer, const vk::raii::Pipeline& graphicsPipeline)
+void RenderController::drawFrame(const VulkanDevice& vulkanDevice, VulkanSwapChain& vulkanSwapChain,
+	CommandBuffer& classCommandBuffer, const GraphicsPipeline& classGraphicsPipeline,
+	bool& framebufferResized, const vk::raii::SurfaceKHR& surface,
+	GLFWwindow* window, const VertexBuffer& classVertexBuffer,UniformBuffer& classUniformBuffer, const DepthBuffer& depthBuffer)
 {
 	const vk::raii::Device& device = vulkanDevice.getLogicalDevice();
-	const vk::raii::Queue& queue = vulkanDevice.getQueue();
-	const vk::raii::SwapchainKHR& swapChain = vulkanSwapChain.getSwapChain();
-	const std::vector<vk::raii::CommandBuffer>& commandBuffers = classCommandBuffer.getCommandBuffers();
 
 	auto fenceResult = device.waitForFences(*inFlightFences[frameIndex], vk::True, UINT64_MAX);
 	if (fenceResult != vk::Result::eSuccess)
 	{
 		throw std::runtime_error("failed to wait for fence!");
 	}
+
+	auto [result, imageIndex] = vulkanSwapChain.getSwapChain().acquireNextImage(UINT64_MAX, *presentCompleteSemaphores[frameIndex], nullptr);
+	if (result == vk::Result::eErrorOutOfDateKHR)
+	{
+		vulkanSwapChain.recreateSwapChain(vulkanDevice.getPhysicalDevice(), vulkanDevice.getLogicalDevice(), surface, window);
+		return;
+	}
+
+	if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR)
+	{
+		assert(result == vk::Result::eTimeout || result == vk::Result::eNotReady);
+		throw std::runtime_error("failed to acquire swap chain image!");
+	}
+
+	classUniformBuffer.updateMVPMat(vulkanSwapChain.getSwapChainExtent(), frameIndex);
+
 	device.resetFences(*inFlightFences[frameIndex]);
 
-	auto [result, imageIndex] = swapChain.acquireNextImage(UINT64_MAX, *presentCompleteSemaphores[frameIndex], nullptr);
+	classCommandBuffer.getCommandBuffers()[frameIndex].reset();
+	classCommandBuffer.recordCommandBuffer(frameIndex, vulkanSwapChain, imageIndex, classGraphicsPipeline, classVertexBuffer, depthBuffer);
 
-	classCommandBuffer.recordCommandBuffer(frameIndex, vulkanSwapChain, imageIndex, graphicsPipeline);
-
-	queue.waitIdle();
+	//vulkanDevice.getQueue().waitIdle();
 
 	vk::PipelineStageFlags waitDestinationStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
 	const vk::SubmitInfo submitInfo{
@@ -48,30 +70,36 @@ void RenderController::drawFrame(const VulkanDevice& vulkanDevice, const VulkanS
 		.pWaitSemaphores = &*presentCompleteSemaphores[frameIndex],
 		.pWaitDstStageMask = &waitDestinationStageMask,
 		.commandBufferCount = 1,
-		.pCommandBuffers = &*commandBuffers[frameIndex],
+		.pCommandBuffers = &*classCommandBuffer.getCommandBuffers()[frameIndex],
 		.signalSemaphoreCount = 1,
-		.pSignalSemaphores = &*renderFinishedSemaphores[frameIndex]
+		.pSignalSemaphores = &*renderFinishedSemaphores[imageIndex]
 	};
-	queue.submit(submitInfo, *inFlightFences[frameIndex]);
+
+	vulkanDevice.getQueue().submit(submitInfo, *inFlightFences[frameIndex]);
 
 	const vk::PresentInfoKHR presentInfoKHR{
 		.waitSemaphoreCount = 1,
-		.pWaitSemaphores = &*renderFinishedSemaphores[frameIndex],
+		.pWaitSemaphores = &*renderFinishedSemaphores[imageIndex],
 		.swapchainCount = 1,
-		.pSwapchains = &*swapChain,
+		.pSwapchains = &*vulkanSwapChain.getSwapChain(),
 		.pImageIndices = &imageIndex
 	};
-
-	result = queue.presentKHR(presentInfoKHR);
-	switch (result)
+	try
 	{
-	case vk::Result::eSuccess:
-		break;
-	case vk::Result::eSuboptimalKHR:
-		std::cout << "vk::Queue::presentKHR returned vk::Result::eSuboptimalKHR !\n";
-		break;
-	default:
-		break;        // an unexpected result is returned!
+		result = vulkanDevice.getQueue().presentKHR(presentInfoKHR);
 	}
-	frameIndex = (frameIndex + 1) % classCommandBuffer.MAX_FRAMES_IN_FLIGHT;
+	catch (const std::exception& e)
+	{
+		if ((result == vk::Result::eSuboptimalKHR) || (result == vk::Result::eErrorOutOfDateKHR) || framebufferResized)
+		{
+			framebufferResized = false;
+			vulkanSwapChain.recreateSwapChain(vulkanDevice.getPhysicalDevice(), vulkanDevice.getLogicalDevice(), surface, window);
+		}
+		else
+		{
+			assert(result == vk::Result::eSuccess);
+		}
+	}
+	
+	frameIndex = (frameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
 }

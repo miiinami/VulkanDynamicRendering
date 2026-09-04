@@ -6,8 +6,12 @@
 #include"VulkanDevice/VulkanDevice.hpp"
 #include"SwapChain/VulkanSwapChain.hpp"
 #include"GraphicsPipeline/GraphicsPipeline.hpp"
+#include"Buffer/VertexBuffer/VertexBuffer.hpp"
 #include"Buffer/CommandBuffer/CommandBuffer.hpp"
 #include"RenderController/RenderController.hpp"
+#include"Buffer/UniformBuffer/UniformBuffer.hpp"
+#include"Buffer/TextureBuffer/TextureBuffer.hpp"
+#include"Buffer/DepthBuffer/DepthBuffer.hpp"
 
 class Core
 {
@@ -30,6 +34,10 @@ private:
 	VulkanDevice vulkanDevice;
 	VulkanSwapChain vulkanSwapChain;
 	GraphicsPipeline graphicsPipeline;
+	VertexBuffer vertexBuffer;
 	CommandBuffer commandBuffer;
 	RenderController renderController;
+	UniformBuffer uniformBuffer;
+	TextureBuffer textureBuffer;
+	DepthBuffer depthBuffer;
 };

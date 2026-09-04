@@ -5,8 +5,5 @@
 class ReadResources
 {
 public:
-
 	static std::vector<char> readShaderFile(const std::string filename);
-
-
 };

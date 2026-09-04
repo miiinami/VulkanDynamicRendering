@@ -18,13 +18,29 @@ void Core::InitVulkan()
 	vulkanSwapChain.createSwapChain(vulkanDevice.getPhysicalDevice(), vulkanDevice.getLogicalDevice(),
 		vulkanSurface.getSurface(), glfwWindow.getGLFWwindow());
 
-	vulkanSwapChain.createImageView(vulkanDevice.getLogicalDevice());
+	vulkanSwapChain.createImageViews(vulkanDevice.getLogicalDevice());
 
-	graphicsPipeline.createGraphicsPipeline(vulkanDevice.getLogicalDevice(), vulkanSwapChain.getSwapChainSurfaceFormat());
+	graphicsPipeline.createGraphicsPipeline(vulkanDevice, vulkanSwapChain.getSwapChainSurfaceFormat());
 
-	commandBuffer.createAboutCommand(vulkanDevice.getLogicalDevice(), vulkanDevice.getQueueIndex());
+	commandBuffer.createCommandPool(vulkanDevice.getLogicalDevice(), vulkanDevice.getQueueIndex());
 
-	renderController.createSyncObjects(vulkanDevice.getLogicalDevice(), vulkanSwapChain.getSwapChainImages().size(), commandBuffer.MAX_FRAMES_IN_FLIGHT);
+	depthBuffer.createDepthResources(vulkanDevice, vulkanSwapChain.getSwapChainExtent());
+
+	textureBuffer.createTextureImage(vulkanDevice, commandBuffer);
+
+	vertexBuffer.createVertexBuffer(vulkanDevice, commandBuffer.getCommandPool());
+
+	vertexBuffer.createIndexBuffer(vulkanDevice, commandBuffer.getCommandPool());
+
+	uniformBuffer.createUniformBuffers(vulkanDevice, commandBuffer.getCommandPool());
+
+	graphicsPipeline.createDescriptorPool(vulkanDevice.getLogicalDevice());
+
+	graphicsPipeline.createDescriptorSets(vulkanDevice.getLogicalDevice(), uniformBuffer.getBuffers(), textureBuffer);
+
+	commandBuffer.createCommandBuffers(vulkanDevice.getLogicalDevice());
+
+	renderController.createSyncObjects(vulkanDevice.getLogicalDevice(), vulkanSwapChain.getSwapChainImages().size());
 }
 
 void Core::Init()
@@ -40,7 +56,10 @@ bool Core::WindowShouldClose()
 
 void Core::drawFrame()
 {
-	renderController.drawFrame(vulkanDevice, vulkanSwapChain, commandBuffer, graphicsPipeline.getGraphicsPipeline());
+	renderController.drawFrame(vulkanDevice, vulkanSwapChain,
+		commandBuffer, graphicsPipeline,
+		glfwWindow.framebufferResized, vulkanSurface.getSurface(),
+		glfwWindow.getGLFWwindow(), vertexBuffer, uniformBuffer, depthBuffer);
 }
 
 void Core::deviceWaitIdle()

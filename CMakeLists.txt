@@ -20,6 +20,7 @@ endif()
 find_package (glfw3 REQUIRED)
 find_package (Vulkan 1.4.335 REQUIRED)      # Require Vulkan SDK version 1.4.335 or higher
 find_package (tinyobjloader REQUIRED)
+find_package(stb REQUIRED)
 
 # set up Vulkan C++ module only if enabled
 if(ENABLE_CPP20_MODULE)
@@ -90,9 +91,17 @@ add_executable(${PROJECT_NAME}
 "Src/Core/SwapChain/VulkanSwapChain.cpp" 
 "Src/Helper/ReadResources/ReadResources.cpp"
 "Src/Core/GraphicsPipeline/GraphicsPipeline.cpp" 
-"Src/Core/Buffer/CommandBuffer/CommandBuffer.cpp"  "Src/Core/RenderController/RenderController.cpp")
+"Src/Core/Buffer/CommandBuffer/CommandBuffer.cpp"  
+"Src/Core/RenderController/RenderController.cpp" 
+"Src/Core/Buffer/VertexBuffer/VertexBuffer.cpp" 
+"Src/Helper/BufferHelper/BufferHelper.cpp" 
+"Src/Core/Buffer/UniformBuffer/UniformBuffer.cpp" 
+"Src/Core/Buffer/TextureBuffer/TextureBuffer.cpp" 
+"Src/Helper/ImageHelper/ImageHelper.cpp" "Src/Core/Buffer/DepthBuffer/DepthBuffer.cpp")
 
  target_include_directories(${PROJECT_NAME} PRIVATE "Src")
+
+ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Resources DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 # 收集所有 .vert 和 .frag 文件（可按需扩展）
 file(GLOB SHADER_FILES
@@ -138,6 +147,8 @@ endif()
 target_link_libraries(${PROJECT_NAME}
   Vulkan::cppm
   glfw
+  tinyobjloader::tinyobjloader
 )
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE MAX_FRAMES_IN_FLIGHT=2)
 target_compile_definitions(${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:NDEBUG>)

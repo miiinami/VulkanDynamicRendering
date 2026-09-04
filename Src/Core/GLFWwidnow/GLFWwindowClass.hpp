@@ -11,9 +11,13 @@ public:
 	const uint32_t WIDTH = 1600;
 	const uint32_t HEIGHT = 900;
 
+	bool framebufferResized;
+
 	void Init();
 	void CleanUp();
 	GLFWwindow* const getGLFWwindow() const;
 private:
 	GLFWwindow* m_window;
+
+	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 };

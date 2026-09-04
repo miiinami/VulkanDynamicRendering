@@ -1,4 +1,5 @@
 #include"VulkanSwapChain.hpp"
+#include"Helper/ImageHelper/ImageHelper.hpp"
 
 VulkanSwapChain::VulkanSwapChain():m_swapchain(nullptr)
 {
@@ -78,19 +79,37 @@ uint32_t VulkanSwapChain::chooseSwapMinImageCount(const vk::SurfaceCapabilitiesK
     return minImageCount;
 }
 
-void VulkanSwapChain::createImageView(const vk::raii::Device& device)
+void VulkanSwapChain::createImageViews(const vk::raii::Device& device)
 {
-    vk::ImageViewCreateInfo imageViewCreateInfo{
-        .viewType = vk::ImageViewType::e2D,
-        .format = m_swapChainSurfaceFormat.format,
-        .subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}
-    };
-
+    m_swapChainImageViews.reserve(m_swapChainImages.size());
     for (auto& image : m_swapChainImages)
     {
-        imageViewCreateInfo.image = image;
-        m_swapChainImageViews.emplace_back(device, imageViewCreateInfo);
+        m_swapChainImageViews.emplace_back(ImageHelper::createImageView(device, image, m_swapChainSurfaceFormat.format, vk::ImageAspectFlagBits::eColor));
     }
+}
+
+void VulkanSwapChain::recreateSwapChain(const vk::raii::PhysicalDevice& physicaldevice, const vk::raii::Device& device, const vk::raii::SurfaceKHR& surface, GLFWwindow* window)
+{
+    int width = 0, height = 0;
+    glfwGetFramebufferSize(window, &width, &height);
+    while (width == 0 || height == 0)
+    {
+        glfwGetFramebufferSize(window, &width, &height);
+        glfwWaitEvents();
+    }
+
+
+    device.waitIdle();
+
+    cleanupSwapChain();
+    createSwapChain(physicaldevice, device, surface, window);
+    createImageViews(device);
+}
+
+void VulkanSwapChain::cleanupSwapChain()
+{
+    m_swapChainImageViews.clear();
+    m_swapchain = nullptr;
 }
 
 const vk::raii::SwapchainKHR& VulkanSwapChain::getSwapChain() const

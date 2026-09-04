@@ -9,7 +9,8 @@ public:
 	~VulkanSwapChain() {};
 
 	void createSwapChain(const vk::raii::PhysicalDevice& physicaldevice, const vk::raii::Device& device, const vk::raii::SurfaceKHR& surface, GLFWwindow* window);
-	void createImageView(const vk::raii::Device& device);
+	void createImageViews(const vk::raii::Device& device);
+	void recreateSwapChain(const vk::raii::PhysicalDevice& physicaldevice, const vk::raii::Device& device, const vk::raii::SurfaceKHR& surface, GLFWwindow* window);
 
 	const vk::raii::SwapchainKHR& getSwapChain() const;
 	const std::vector<vk::Image>& getSwapChainImages() const;
@@ -27,4 +28,5 @@ private:
 	vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes);
 	vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities, GLFWwindow* window);
 	uint32_t chooseSwapMinImageCount(const vk::SurfaceCapabilitiesKHR& surfaceCapabilities);
+	void cleanupSwapChain();
 };
